@@ -3,9 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { setLoading, setUser, setToken } from "@/redux/authSlice";
 import { Loader2, Eye, EyeOff, Mail } from "lucide-react";
-import { userApi } from "@/utils/axios";
 import { toast } from "sonner";
-import { USER_API_END_POINT } from "@/utils/constant";
+import { api } from "@/utils/api";
 import professionalImage from "../../assets/professionals.svg";
 import Navbar from "../shared/Navbar";
 import Footer from "../Footer";
@@ -60,15 +59,24 @@ const Login = () => {
 
     try {
       dispatch(setLoading(true));
-      const res = await userApi.post('/login', input);
-      if (res.data.success) {
-        dispatch(setUser(res.data.user));
-        dispatch(setToken(res.data.token));
+      const data = await api.login({
+        email: input.email,
+        password: input.password
+      });
+
+      if (data.success) {
+        // Set token in localStorage for future requests
+        if (data.token) {
+          localStorage.setItem('token', data.token);
+          dispatch(setToken(data.token));
+        }
+        
+        dispatch(setUser(data.user));
         navigate("/");
-        toast.success(res.data.message);
+        toast.success(data.message);
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Login failed");
+      toast.error(error.message || "Login failed");
     } finally {
       dispatch(setLoading(false));
     }
