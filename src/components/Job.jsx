@@ -18,8 +18,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import axios from "axios";
-import { SAVED_JOBS_API_END_POINT } from "../utils/constant";
+import { jobApi } from "@/utils/axios";
 
 function Job({ job }) {
   const navigate = useNavigate();
@@ -35,11 +34,8 @@ function Job({ job }) {
     if (isAuthenticated) {
       const checkSavedStatus = async () => {
         try {
-          const response = await axios.get(
-            `${SAVED_JOBS_API_END_POINT}/check/${job.jobId}`,
-            { withCredentials: true }
-          );
-          setIsSaved(response.data.isSaved);
+          const res = await jobApi.get(`/jobs/${job.jobId}`);
+          setIsSaved(res.data.isSaved);
         } catch (error) {
           console.error("Error checking saved status:", error);
         }
@@ -69,17 +65,10 @@ function Job({ job }) {
     try {
       setIsLoading(true);
       if (!isSaved) {
-        await axios.post(
-          `${SAVED_JOBS_API_END_POINT}/save`,
-          { jobId: job.jobId },
-          { withCredentials: true }
-        );
+        await jobApi.post('/save', { jobId: job.jobId });
         setIsSaved(true);
       } else {
-        await axios.delete(
-          `${SAVED_JOBS_API_END_POINT}/unsave/${job.jobId}`,
-          { withCredentials: true }
-        );
+        await jobApi.delete(`/unsave/${job.jobId}`);
         setIsSaved(false);
       }
     } catch (error) {

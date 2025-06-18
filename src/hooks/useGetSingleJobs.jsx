@@ -1,7 +1,7 @@
 import { setLoading } from "@/redux/authSlice";
 import { setAllJobs, setSingleJob } from "@/redux/jobSlice";
 import { JOB_API_END_POINT } from "@/utils/constant";
-import axios from "axios";
+import { jobApi } from "@/utils/axios";
 import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 
@@ -13,10 +13,7 @@ function useGetSingleJob({jobId}) {
     const fetchSingleJob = async () => {
       dispatch(setLoading(true)); // Dispatching the Redux action to set loading state
       try {
-        const res = await axios.get(`${JOB_API_END_POINT}/get/${jobId}`, {
-          withCredentials: true,
-        });
-
+        const res = await jobApi.get(`/jobs/${jobId}`);
 
         if (res.data.status) {
           dispatch(setSingleJob(res.data)); // Update Redux state with fetched jobs

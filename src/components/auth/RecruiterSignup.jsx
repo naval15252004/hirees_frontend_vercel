@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import emp from "../../assets/emp.svg";
-import axios from "axios";
+import { userApi } from "@/utils/axios";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { setLoading } from "@/redux/authSlice";
@@ -83,10 +83,7 @@ const RecruiterSignup = () => {
 
     try {
       dispatch(setLoading(true));
-      const res = await axios.post(`${USER_API_END_POINT}/register`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-        withCredentials: true,
-      });
+      const res = await userApi.post('/register', formData);
       if (res.data.status) {
         navigate("/login");
         toast.success(res.data.message);

@@ -2,7 +2,7 @@ import { setLoading } from "@/redux/authSlice";
 import { setAllCompanies } from "@/redux/companySlice";
 
 import { COMPANY_API_END_POINT } from "@/utils/constant";
-import axios from "axios";
+import { companyApi } from "@/utils/axios";
 import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
 
@@ -14,11 +14,7 @@ function useGetAllCompany() {
     const fetchAllCompany = async () => {
       dispatch(setLoading(true)); // Dispatching the Redux action to set loading state
       try {
-        const res = await axios.get(`${COMPANY_API_END_POINT}/get`, {
-          withCredentials: true,
-        });
-
-
+        const res = await companyApi.get('/companies');
 
         if (res.data.status) {
           dispatch(setAllCompanies(res.data.companies)); // Update Redux state with fetched jobs

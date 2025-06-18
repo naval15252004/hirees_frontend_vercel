@@ -1,7 +1,7 @@
 import { setAllJobs } from "@/redux/jobSlice";
 import store from "@/redux/store";
 import { JOB_API_END_POINT } from "@/utils/constant";
-import axios from "axios";
+import { jobApi } from "@/utils/axios";
 import { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 
@@ -19,9 +19,7 @@ function useGetAllJobs() {
         const queryParam = searchQuery ? `?keyword=${searchQuery}` : '';
 
 
-        const res = await axios.get(`${JOB_API_END_POINT}/get${queryParam}`, {
-          withCredentials: true,
-        });
+        const res = await jobApi.get('/jobs');
 
         dispatch(setAllJobs(res.data));
       } catch (err) {

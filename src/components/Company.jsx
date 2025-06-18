@@ -15,6 +15,7 @@ import Navbar from "./shared/Navbar";
 import Footer from "./Footer";
 import TopCompanies from "./TopCompanies";
 import { COMPANY_API_END_POINT } from "../utils/constant";
+import { companyApi } from "@/utils/axios";
 
 // Card component for displaying company information
 const CompanyCard = ({ company, onViewJobs }) => {
@@ -190,8 +191,13 @@ const Company = () => {
   };
 
   // Handle navigation to jobs page
-  const handleViewJobs = (companyId) => {
-    navigate(`/jobs/${companyId}`);
+  const handleViewJobs = async (companyId) => {
+    try {
+      const response = await companyApi.get(`/companies/${companyId}`);
+      navigate(`/jobs/${companyId}`);
+    } catch (error) {
+      console.error("Error fetching company details:", error);
+    }
   };
 
   // Render loading skeleton

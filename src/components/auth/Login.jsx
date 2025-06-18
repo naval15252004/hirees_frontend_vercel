@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { setLoading, setUser } from "@/redux/authSlice";
+import { setLoading, setUser, setToken } from "@/redux/authSlice";
 import { Loader2, Eye, EyeOff, Mail } from "lucide-react";
-import axios from "axios";
+import { userApi } from "@/utils/axios";
 import { toast } from "sonner";
 import { USER_API_END_POINT } from "@/utils/constant";
 import professionalImage from "../../assets/professionals.svg";
@@ -60,20 +60,15 @@ const Login = () => {
 
     try {
       dispatch(setLoading(true));
-      const res = await axios.post(`${USER_API_END_POINT}/login`, input, {
-        headers: {
-          "Content-Type": "application/json",
-        },
-        withCredentials: true,
-      });
+      const res = await userApi.post('/login', input);
       if (res.data.success) {
-        localStorage.setItem("user", JSON.stringify(res.data.user));
         dispatch(setUser(res.data.user));
+        dispatch(setToken(res.data.token));
         navigate("/");
         toast.success(res.data.message);
       }
     } catch (error) {
-      toast.error(error.response.data.message);
+      toast.error(error.response?.data?.message || "Login failed");
     } finally {
       dispatch(setLoading(false));
     }

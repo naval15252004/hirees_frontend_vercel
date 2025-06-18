@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { jobApi } from "@/utils/axios";
 import { Eye, MoreVertical, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import { APPLICATION_API_END_POINT, SAVED_JOBS_API_END_POINT } from "@/utils/constant";
 import {
@@ -82,9 +82,7 @@ function JobsSection() {
   const fetchAppliedJobs = async () => {
     try {
       setIsLoading(true);
-      const res = await axios.get(`${APPLICATION_API_END_POINT}/get`, {
-        withCredentials: true,
-      });
+      const res = await jobApi.get('/jobs');
 
       if (res.data.status) {
         const jobs = res.data.applications?.map((application) => ({
@@ -114,9 +112,7 @@ function JobsSection() {
   const fetchSavedJobs = async () => {
     try {
       setIsLoading(true);
-      const res = await axios.get(`${SAVED_JOBS_API_END_POINT}/saved`, {
-        withCredentials: true,
-      });
+      const res = await jobApi.get('/saved');
       setSavedJobs(res.data.savedJobs || []);
       setIsLoading(false);
     } catch (err) {
@@ -127,10 +123,7 @@ function JobsSection() {
 
   const handleRemoveSavedJob = async (jobId) => {
     try {
-      await axios.delete(`${SAVED_JOBS_API_END_POINT}/saved`, {
-        data: { jobId },
-        withCredentials: true,
-      });
+      await jobApi.delete('/saved', { data: { jobId } });
       setSavedJobs(prev => prev.filter(job => job.savedJobId !== jobId));
     } catch (error) {
       console.error("Error removing saved job:", error);

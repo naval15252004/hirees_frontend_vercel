@@ -1,6 +1,5 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import axios from "axios";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { setLoading } from "@/redux/authSlice";
@@ -8,6 +7,7 @@ import { Loader2 } from "lucide-react";
 import { USER_API_END_POINT } from "@/utils/constant";
 import Navbar from "../shared/Navbar";
 import Footer from "../Footer";
+import { userApi } from "@/utils/axios";
 // Import SVG for candidate
 import candidate from "../../assets/candidate.svg"; // You'll need to ensure this exists or replace with appropriate SVG
 
@@ -111,10 +111,7 @@ const CandidateSignup = () => {
 
     try {
       dispatch(setLoading(true));
-      const res = await axios.post(`${USER_API_END_POINT}/register`, formData, {
-        headers: { "Content-Type": "multipart/form-data" },
-        withCredentials: true,
-      });
+      const res = await userApi.post('/register', formData);
       if (res.data.status) {
         navigate("/login");
         toast.success(res.data.message);

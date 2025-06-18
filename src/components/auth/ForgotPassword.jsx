@@ -10,8 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Loader2, Eye, EyeOff } from "lucide-react";
-import axios from "axios";
-import { USER_API_END_POINT } from "@/utils/constant";
+import { userApi } from "@/utils/axios";
 
 const ForgotPassword = ({ open, onClose }) => {
   const [step, setStep] = useState(1);
@@ -74,9 +73,7 @@ const ForgotPassword = ({ open, onClose }) => {
 
     try {
       setLoading(true);
-      const res = await axios.post(`${USER_API_END_POINT}/forgot-password`, {
-        email,
-      });
+      const res = await userApi.post('/forgot-password', { email });
       if (res.data.success) {
         toast.success("Verification code sent to your email");
         setStep(2);
@@ -93,10 +90,7 @@ const ForgotPassword = ({ open, onClose }) => {
 
     try {
       setLoading(true);
-      const res = await axios.post(`${USER_API_END_POINT}/verify-code`, {
-        email,
-        code: verificationCode,
-      });
+      const res = await userApi.post('/verify-code', { email, code: verificationCode });
       if (res.data.success) {
         toast.success("Code verified successfully");
         setStep(3);
@@ -113,11 +107,7 @@ const ForgotPassword = ({ open, onClose }) => {
 
     try {
       setLoading(true);
-      const res = await axios.post(`${USER_API_END_POINT}/reset-password`, {
-        email,
-        code: verificationCode,
-        password: passwords.password,
-      });
+      const res = await userApi.post('/reset-password', { email, code: verificationCode, newPassword: passwords.password });
       if (res.data.success) {
         toast.success("Password reset successfully");
         onClose();

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import axios from "axios";
+import { savedJobsApi, jobApi, companyApi } from "@/utils/axios";
 import {
   Briefcase,
   CheckCircle2,
@@ -120,10 +120,7 @@ function JobDescription() {
     if (isAuthenticated) {
       const checkSavedStatus = async () => {
         try {
-          const response = await axios.get(
-            `${SAVED_JOBS_API_END_POINT}/check/${jobId}`,
-            { withCredentials: true }
-          );
+          const response = await savedJobsApi.get(`/check/${jobId}`);
           setIsSaved(response.data.isSaved);
         } catch (error) {
           console.error("Error checking saved status:", error);
@@ -149,17 +146,10 @@ function JobDescription() {
     try {
       setIsLoading(true);
       if (!isSaved) {
-        await axios.post(
-          `${SAVED_JOBS_API_END_POINT}/save`,
-          { jobId },
-          { withCredentials: true }
-        );
+        await savedJobsApi.post('/save', { jobId });
         setIsSaved(true);
       } else {
-        await axios.delete(
-          `${SAVED_JOBS_API_END_POINT}/unsave/${jobId}`,
-          { withCredentials: true }
-        );
+        await savedJobsApi.delete(`/unsave/${jobId}`);
         setIsSaved(false);
       }
     } catch (error) {
@@ -179,10 +169,7 @@ function JobDescription() {
     dispatch(setLoading(true));
 
     try {
-      const res = await axios.get(
-        `${APPLICATION_API_END_POINT}/apply/${jobId}`,
-        { withCredentials: true }
-      );
+      const res = await jobApi.get(`/jobs/${jobId}`);
 
       if (res.data.status) {
         toast.success(res.data.message || "Applied Successfully");
@@ -215,9 +202,7 @@ function JobDescription() {
 
       try {
         // Fetch job details
-        const res = await axios.get(`${JOB_API_END_POINT}/get/${jobId}`, {
-          withCredentials: true,
-        });
+        const res = await jobApi.get(`/jobs/${jobId}`);
 
         if (res.data.status) {
           dispatch(setSingleJob(res.data.job));
@@ -230,9 +215,7 @@ function JobDescription() {
           // Fetch company details
           if (res.data.job.companyId) {
             try {
-              const companyRes = await axios.get(
-                `${COMPANY_API_END_POINT}/get/${res.data.job.companyId}`
-              );
+              const companyRes = await companyApi.get(`/get/${res.data.job.companyId}`);
               if (companyRes.data.status) {
                 setCompanyDetails(companyRes.data.data);
               }
@@ -244,9 +227,7 @@ function JobDescription() {
 
           // Fetch latest jobs
           try {
-            const latestJobsRes = await axios.get(
-              `${JOB_API_END_POINT}/getlatest?limit=2&exclude=${jobId}`
-            );
+            const latestJobsRes = await jobApi.get('/get');
             if (latestJobsRes.data.status) {
               setMoreJobs(latestJobsRes.data.jobs);
             }

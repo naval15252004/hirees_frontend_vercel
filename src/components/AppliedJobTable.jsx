@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import { userApi } from "@/utils/axios";
 import {
   Eye,
   MoreVertical,
@@ -67,10 +67,7 @@ function AppliedJobTable() {
     const fetchAppliedJobs = async () => {
       try {
         setIsLoading(true);
-        const res = await axios.get(
-          `${APPLICATION_API_END_POINT}/get`,
-          { withCredentials: true }
-        );
+        const res = await userApi.get('/applications');
 
         if (res.data.status) {
           const jobs = res.data.applications.map((application) => ({
