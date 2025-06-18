@@ -17,8 +17,10 @@ import {
   Globe,
   BookmarkIcon,
   ArrowRight,
+  Loader2,
 } from "lucide-react";
 import PropTypes from "prop-types";
+import axios from "axios";
 
 import { Button } from "./ui/button";
 import Navbar from "./shared/Navbar";
@@ -35,7 +37,6 @@ import { setLoading } from "@/redux/authSlice";
 import { setSingleJob } from "@/redux/jobSlice";
 import { toast } from "sonner";
 import Footer from "./Footer";
-import { fetchWithAuth } from "@/utils/fetchWithAuth";
 
 const renderFormattedText = (text, lineClamp = 0) => (
   <div
@@ -76,6 +77,8 @@ function JobDescription() {
   const [isSaved, setIsSaved] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [lastAction, setLastAction] = useState(null);
+  const [job, setJob] = useState(null);
+  const [company, setCompany] = useState(null);
 
   const { singleJob } = useSelector((store) => store.job);
   const { user } = useSelector((store) => store.auth);
@@ -115,68 +118,67 @@ function JobDescription() {
     }
   })();
 
-  // Check if job is saved when component mounts
-  useEffect(() => {
-    if (isAuthenticated) {
-      const checkSavedStatus = async () => {
-        try {
-          const response = await fetchWithAuth(`${SAVED_JOBS_API_END_POINT}/check/${jobId}`);
-          const data = await response.json();
-          setIsSaved(data.isSaved);
-        } catch (error) {
-          console.error("Error checking saved status:", error);
+  const checkIfSaved = async () => {
+    try {
+      const response = await axios.get(
+        `${SAVED_JOBS_API_END_POINT}/check/${jobId}`,
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json'
+          }
         }
-      };
-      checkSavedStatus();
-    }
-  }, [jobId, isAuthenticated]);
-
-  const handleAction = (action) => {
-    if (!isAuthenticated) {
-      setLastAction(action);
-      setShowAuthModal(true);
-      return;
-    }
-
-    if (action === "save") {
-      handleSaveJob();
+      );
+      setIsSaved(response.data.isSaved);
+    } catch (error) {
+      console.error("Error checking saved status:", error);
     }
   };
 
   const handleSaveJob = async () => {
     try {
-      const res = await fetchWithAuth(`${SAVED_JOBS_API_END_POINT}/save`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ jobId }),
-      });
-      const data = await res.json();
-      if (data.status) {
+      const response = await axios.post(
+        `${SAVED_JOBS_API_END_POINT}/save`,
+        { jobId },
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      if (response.data.success) {
         setIsSaved(true);
+        toast.success("Job saved successfully!");
       }
     } catch (error) {
-      console.error("Error saving job:", error);
+      toast.error(error.response?.data?.message || "Failed to save job");
     }
   };
 
   const handleUnsaveJob = async () => {
     try {
-      const res = await fetchWithAuth(`${SAVED_JOBS_API_END_POINT}/unsave/${jobId}`, {
-        method: 'DELETE',
-      });
-      const data = await res.json();
-      if (data.status) {
+      const response = await axios.delete(
+        `${SAVED_JOBS_API_END_POINT}/unsave/${jobId}`,
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      if (response.data.success) {
         setIsSaved(false);
+        toast.success("Job unsaved successfully!");
       }
     } catch (error) {
-      console.error("Error unsaving job:", error);
+      toast.error(error.response?.data?.message || "Failed to unsave job");
     }
   };
 
   const applyJobHandler = async () => {
     if (!isAuthenticated) {
+      setLastAction("save");
       setShowAuthModal(true);
       return;
     }
@@ -185,11 +187,18 @@ function JobDescription() {
     dispatch(setLoading(true));
 
     try {
-      const res = await fetchWithAuth(`${JOB_API_END_POINT}/jobs/${jobId}`);
-      const data = await res.json();
+      const res = await axios.get(
+        `${JOB_API_END_POINT}/jobs/${jobId}`,
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
 
-      if (data.status) {
-        toast.success(data.message || "Applied Successfully");
+      if (res.data.status) {
+        toast.success(res.data.message || "Applied Successfully");
         setIsApplied(true);
         dispatch(
           setSingleJob({
@@ -212,88 +221,105 @@ function JobDescription() {
 
   const fetchJobDetails = async () => {
     try {
-      const res = await fetchWithAuth(`${JOB_API_END_POINT}/jobs/${jobId}`);
-      const data = await res.json();
-      setJob(data.job);
-      setCompany(data.company);
-    } catch (error) {
-      console.error("Error fetching job details:", error);
+      const res = await axios.get(
+        `${JOB_API_END_POINT}/jobs/${jobId}`,
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      setJob(res.data.job);
+      setCompany(res.data.company);
+
+      if (res.data.status) {
+        dispatch(setSingleJob(res.data.job));
+        setIsApplied(
+          res.data.job.applications?.some(
+            (application) => application.applicant === user?._id
+          ) || false
+        );
+
+        // Fetch company details
+        if (res.data.job.companyId) {
+          try {
+            const companyRes = await axios.get(
+              `${COMPANY_API_END_POINT}/get/${res.data.job.companyId}`,
+              {
+                withCredentials: true,
+                headers: {
+                  'Content-Type': 'application/json'
+                }
+              }
+            );
+            if (companyRes.data.status) {
+              setCompanyDetails(companyRes.data.data);
+            }
+          } catch (companyErr) {
+            console.error("Error fetching company details:", companyErr);
+            toast.error("Error fetching company details");
+          }
+        }
+
+        // Fetch latest jobs
+        try {
+          const latestJobsRes = await axios.get(
+            `${JOB_API_END_POINT}/get`,
+            {
+              withCredentials: true,
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            }
+          );
+          if (latestJobsRes.data.status) {
+            setMoreJobs(latestJobsRes.data.jobs);
+          }
+        } catch (latestJobsErr) {
+          console.error("Error fetching latest jobs:", latestJobsErr);
+          // Don't show error toast for latest jobs as it's not critical
+        }
+      } else {
+        setError(new Error("Failed to fetch job details."));
+        toast.error("Failed to fetch job details");
+      }
+    } catch (err) {
+      console.error("Error fetching job:", err);
+      setError(err);
+      toast.error(err.response?.data?.message || "Error fetching job details");
     }
   };
 
   const handleApply = async () => {
     try {
-      const res = await fetchWithAuth(`${JOB_API_END_POINT}/apply`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ jobId }),
-      });
-      const data = await res.json();
-      if (data.status) {
-        navigate('/applied-jobs');
+      setIsLoading(true);
+      const res = await axios.post(
+        `${JOB_API_END_POINT}/apply`,
+        { jobId },
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      if (res.data.success) {
+        toast.success("Application submitted successfully!");
+        navigate("/applications");
       }
     } catch (error) {
-      console.error("Error applying for job:", error);
+      toast.error(error.response?.data?.message || "Failed to apply for job");
+    } finally {
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
     if (!jobId) return;
 
-    const fetchSingleJob = async () => {
-      dispatch(setLoading(true));
-
-      try {
-        // Fetch job details
-        const res = await jobApi.get(`/jobs/${jobId}`);
-
-        if (res.data.status) {
-          dispatch(setSingleJob(res.data.job));
-          setIsApplied(
-            res.data.job.applications?.some(
-              (application) => application.applicant === user?._id
-            ) || false
-          );
-
-          // Fetch company details
-          if (res.data.job.companyId) {
-            try {
-              const companyRes = await companyApi.get(`/get/${res.data.job.companyId}`);
-              if (companyRes.data.status) {
-                setCompanyDetails(companyRes.data.data);
-              }
-            } catch (companyErr) {
-              console.error("Error fetching company details:", companyErr);
-              toast.error("Error fetching company details");
-            }
-          }
-
-          // Fetch latest jobs
-          try {
-            const latestJobsRes = await jobApi.get('/get');
-            if (latestJobsRes.data.status) {
-              setMoreJobs(latestJobsRes.data.jobs);
-            }
-          } catch (latestJobsErr) {
-            console.error("Error fetching latest jobs:", latestJobsErr);
-            // Don't show error toast for latest jobs as it's not critical
-          }
-        } else {
-          setError(new Error("Failed to fetch job details."));
-          toast.error("Failed to fetch job details");
-        }
-      } catch (err) {
-        console.error("Error fetching job:", err);
-        setError(err);
-        toast.error(err.response?.data?.message || "Error fetching job details");
-      } finally {
-        dispatch(setLoading(false));
-      }
-    };
-
-    fetchSingleJob();
+    fetchJobDetails();
+    checkIfSaved();
   }, [jobId, dispatch, user?._id]);
 
   const JobCard = ({ job }) => (
@@ -461,7 +487,7 @@ function JobDescription() {
             {user?.role !== "recruiter" && (
               <div className="flex items-center gap-3">
                 <button
-                  onClick={() => handleAction("save")}
+                  onClick={() => handleSaveJob()}
                   disabled={isLoading}
                   className="relative transition duration-300 disabled:cursor-not-allowed"
                 >

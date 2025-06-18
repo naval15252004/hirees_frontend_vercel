@@ -1,41 +1,71 @@
-import React, { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import emp from "../../assets/emp.svg";
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { USER_API_END_POINT } from "@/utils/constant";
-import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import { toast } from "sonner";
-import { useDispatch, useSelector } from "react-redux";
+import { useDispatch } from "react-redux";
 import { setLoading } from "@/redux/authSlice";
 import { Loader2 } from "lucide-react";
-import Navbar from "../shared/Navbar";
-import Footer from "../Footer";
+import axios from "axios";
 
 const RecruiterSignup = () => {
-  const nav = useNavigate();
-  const [input, setInput] = useState({
-    Name: "",
-    email: "",
-    phoneNumber: "",
-    password: "",
-    file: "",
-    country: "USA",
-    role: "recruiter",
-  });
-  const [errors, setErrors] = useState({});
-  const { loading } = useSelector((store) => store.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+    role: "recruiter",
+    companyName: "",
+    companyWebsite: "",
+    country: "",
+    phoneNumber: "",
+  });
 
-  const togglePasswordVisibility = () => {
-    setInput({ ...input, showPassword: !input.showPassword });
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
   };
 
-  const changeEventHandler = (e) => {
-    setInput({ ...input, [e.target.name]: e.target.value });
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!formData.email || !formData.password || !formData.companyName) {
+      toast.error("Please fill all the fields");
+      return;
+    }
+    try {
+      setIsLoading(true);
+      dispatch(setLoading(true));
+      const { data } = await axios.post(`${USER_API_END_POINT}/signup`, formData, {
+        withCredentials: true
+      });
+      if (data.status) {
+        toast.success(data.message);
+        if (data.token) {
+          localStorage.setItem("token", data.token);
+        }
+        navigate("/");
+      } else {
+        toast.error(data.message);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.message || "Something went wrong");
+    } finally {
+      setIsLoading(false);
+      dispatch(setLoading(false));
+    }
+  };
+
+  const togglePasswordVisibility = () => {
+    setFormData({ ...formData, showPassword: !formData.showPassword });
   };
 
   const changeFileHandler = (e) => {
-    setInput({ ...input, file: e.target.files?.[0] });
+    setFormData({ ...formData, file: e.target.files?.[0] });
   };
 
   const isValidEmail = (email) => {
@@ -44,10 +74,10 @@ const RecruiterSignup = () => {
   };
 
   const validateForm = () => {
-    const { Name, email, phoneNumber, password, country } = input;
+    const { firstName, email, phoneNumber, password, country } = formData;
     const newErrors = {};
 
-    if (!Name) newErrors.Name = "Name is required";
+    if (!firstName) newErrors.firstName = "First Name is required";
     if (!email) newErrors.email = "Email is required";
     if (!phoneNumber) newErrors.phoneNumber = "Phone Number is required";
     if (!password) newErrors.password = "Password is required";
@@ -61,39 +91,12 @@ const RecruiterSignup = () => {
       newErrors.email = "Invalid email format";
     }
 
-    setErrors(newErrors);
+    setFormData({ ...formData, errors: newErrors });
     return Object.keys(newErrors).length === 0;
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      const res = await fetchWithAuth(`${USER_API_END_POINT}/signup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: `${input.Name}`,
-          email: input.email,
-          password: input.password,
-          role: 'recruiter',
-          country: input.country,
-          phoneNumber: input.phoneNumber,
-        }),
-      });
-      const data = await res.json();
-      if (data.status) {
-        navigate('/login');
-      }
-    } catch (error) {
-      console.error("Error signing up:", error);
-    }
   };
 
   return (
     <div className="flex flex-col min-h-screen">
-      <Navbar />
       <div className="flex-grow flex items-center justify-center py-6 sm:py-8 md:py-12 px-4 sm:px-6 lg:px-8 mt-14">
         <div className="w-full max-w-4xl bg-white rounded-lg shadow-lg overflow-hidden mx-auto my-4 sm:my-8">
           <div className="flex flex-col md:flex-row">
@@ -135,16 +138,32 @@ const RecruiterSignup = () => {
                   <div>
                     <input
                       type="text"
-                      placeholder="Enter your name*"
-                      name="Name"
-                      value={input.Name}
-                      onChange={changeEventHandler}
+                      placeholder="Enter your first name*"
+                      name="firstName"
+                      value={formData.firstName}
+                      onChange={handleChange}
                       className={`w-full p-2.5 text-sm border ${
-                        errors.Name ? "border-red-500" : "border-gray-300"
+                        formData.errors?.firstName ? "border-red-500" : "border-gray-300"
                       } rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent`}
                     />
-                    {errors.Name && (
-                      <p className="text-red-500 text-xs mt-1">{errors.Name}</p>
+                    {formData.errors?.firstName && (
+                      <p className="text-red-500 text-xs mt-1">{formData.errors.firstName}</p>
+                    )}
+                  </div>
+
+                  <div>
+                    <input
+                      type="text"
+                      placeholder="Enter your last name*"
+                      name="lastName"
+                      value={formData.lastName}
+                      onChange={handleChange}
+                      className={`w-full p-2.5 text-sm border ${
+                        formData.errors?.lastName ? "border-red-500" : "border-gray-300"
+                      } rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent`}
+                    />
+                    {formData.errors?.lastName && (
+                      <p className="text-red-500 text-xs mt-1">{formData.errors.lastName}</p>
                     )}
                   </div>
 
@@ -154,16 +173,14 @@ const RecruiterSignup = () => {
                         type="email"
                         placeholder="Enter your email*"
                         name="email"
-                        value={input.email}
-                        onChange={changeEventHandler}
+                        value={formData.email}
+                        onChange={handleChange}
                         className={`w-full p-2.5 text-sm border ${
-                          errors.email ? "border-red-500" : "border-gray-300"
+                          formData.errors?.email ? "border-red-500" : "border-gray-300"
                         } rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent`}
                       />
-                      {errors.email && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {errors.email}
-                        </p>
+                      {formData.errors?.email && (
+                        <p className="text-red-500 text-xs mt-1">{formData.errors.email}</p>
                       )}
                     </div>
 
@@ -172,18 +189,14 @@ const RecruiterSignup = () => {
                         type="text"
                         placeholder="Enter your phone no*"
                         name="phoneNumber"
-                        value={input.phoneNumber}
-                        onChange={changeEventHandler}
+                        value={formData.phoneNumber}
+                        onChange={handleChange}
                         className={`w-full p-2.5 text-sm border ${
-                          errors.phoneNumber
-                            ? "border-red-500"
-                            : "border-gray-300"
+                          formData.errors?.phoneNumber ? "border-red-500" : "border-gray-300"
                         } rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent`}
                       />
-                      {errors.phoneNumber && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {errors.phoneNumber}
-                        </p>
+                      {formData.errors?.phoneNumber && (
+                        <p className="text-red-500 text-xs mt-1">{formData.errors.phoneNumber}</p>
                       )}
                     </div>
                   </div>
@@ -191,13 +204,13 @@ const RecruiterSignup = () => {
                   <div>
                     <div className="relative">
                       <input
-                        type={input.showPassword ? "text" : "password"}
+                        type={formData.showPassword ? "text" : "password"}
                         placeholder="Password*"
                         name="password"
-                        value={input.password}
-                        onChange={changeEventHandler}
+                        value={formData.password}
+                        onChange={handleChange}
                         className={`w-full p-2.5 text-sm border ${
-                          errors.password ? "border-red-500" : "border-gray-300"
+                          formData.errors?.password ? "border-red-500" : "border-gray-300"
                         } rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent`}
                       />
                       <button
@@ -227,10 +240,8 @@ const RecruiterSignup = () => {
                         </svg>
                       </button>
                     </div>
-                    {errors.password && (
-                      <p className="text-red-500 text-xs mt-1">
-                        {errors.password}
-                      </p>
+                    {formData.errors?.password && (
+                      <p className="text-red-500 text-xs mt-1">{formData.errors.password}</p>
                     )}
                   </div>
 
@@ -238,8 +249,8 @@ const RecruiterSignup = () => {
                     <div className="relative">
                       <select
                         name="country"
-                        value={input.country}
-                        onChange={changeEventHandler}
+                        value={formData.country}
+                        onChange={handleChange}
                         className="w-full p-2.5 text-sm border border-gray-300 rounded-md appearance-none focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
                       >
                         <option value="USA">USA</option>
@@ -298,7 +309,7 @@ const RecruiterSignup = () => {
                     type="submit"
                     className="w-full p-2.5 bg-gradient-to-r from-orange-400 to-red-500 text-white rounded-md font-medium text-sm hover:from-orange-500 hover:to-red-600 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
                   >
-                    {loading ? (
+                    {isLoading ? (
                       <div className="flex items-center justify-center">
                         <Loader2 className="w-4 h-4 animate-spin mr-2" />
                         Processing...

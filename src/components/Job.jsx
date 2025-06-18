@@ -1,282 +1,126 @@
-import React, { useState, useEffect } from "react";
-import {
-  Briefcase,
-  MapPin,
-  DollarSign,
-  BookmarkIcon,
-  X,
-  LogIn,
-  Building2,
-} from "lucide-react";
-import { Link, useNavigate } from "react-router-dom";
-import { useSelector } from "react-redux";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
+import { useState, useEffect } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
+import { useDispatch, useSelector } from "react-redux";
+import { setLoading } from "@/redux/authSlice";
+import { Loader2 } from "lucide-react";
+import axios from "axios";
 import { JOB_API_END_POINT } from "@/utils/constant";
-import { fetchWithAuth } from "@/utils/fetchWithAuth";
 
-function Job({ job }) {
+const Job = () => {
+  const { id } = useParams();
   const navigate = useNavigate();
-  const [isSaved, setIsSaved] = useState(false);
+  const dispatch = useDispatch();
   const [isLoading, setIsLoading] = useState(false);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [lastAction, setLastAction] = useState(null);
-
-  const user = useSelector((state) => state.auth?.user);
-  const isAuthenticated = !!user;
+  const [job, setJob] = useState(null);
+  const { user } = useSelector((store) => store.auth);
+  const [isApplying, setIsApplying] = useState(false);
+  const [isApplied, setIsApplied] = useState(false);
 
   useEffect(() => {
-    if (isAuthenticated) {
-      const checkSavedStatus = async () => {
-        try {
-          const res = await fetchWithAuth(`${JOB_API_END_POINT}/jobs/${job.jobId}`);
-          const data = await res.json();
-          setIsSaved(data.isSaved);
-        } catch (error) {
-          console.error("Error checking saved status:", error);
+    const fetchJob = async () => {
+      try {
+        const response = await axios.get(`${JOB_API_END_POINT}/jobs/${id}`, {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+        setJob(response.data.job);
+      } catch (error) {
+        toast.error(error.response?.data?.message || "Failed to fetch job details");
+        navigate("/jobs");
+      }
+    };
+
+    fetchJob();
+  }, [id, navigate]);
+
+  const handleApply = async () => {
+    if (!user) {
+      toast.error("Please login to apply for jobs");
+      navigate("/login");
+      return;
+    }
+
+    try {
+      setIsApplying(true);
+      const { data } = await axios.post(
+        `${JOB_API_END_POINT}/apply/${job._id}`,
+        {},
+        {
+          withCredentials: true
         }
-      };
-      checkSavedStatus();
-    }
-  }, [job.jobId, isAuthenticated]);
-
-  const handleAction = (action) => {
-    if (action === "description") {
-      navigate(`/description/${job?.jobId}`);
-      return;
-    }
-
-    if (!isAuthenticated) {
-      setLastAction(action);
-      setShowAuthModal(true);
-      return;
-    }
-
-    if (action === "save") {
-      handleSaveJob();
-    }
-  };
-
-  const handleSaveJob = async () => {
-    try {
-      const res = await fetchWithAuth(`${JOB_API_END_POINT}/save`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ jobId: job.jobId }),
-      });
-      const data = await res.json();
+      );
       if (data.status) {
-        setIsSaved(true);
+        toast.success(data.message);
+        setIsApplied(true);
+      } else {
+        toast.error(data.message);
       }
     } catch (error) {
-      console.error("Error saving job:", error);
+      toast.error(error.response?.data?.message || "Failed to apply for job");
+    } finally {
+      setIsApplying(false);
     }
   };
 
-  const handleUnsaveJob = async () => {
-    try {
-      const res = await fetchWithAuth(`${JOB_API_END_POINT}/unsave/${job.jobId}`, {
-        method: 'DELETE',
-      });
-      const data = await res.json();
-      if (data.status) {
-        setIsSaved(false);
-      }
-    } catch (error) {
-      console.error("Error unsaving job:", error);
-    }
-  };
-
-  const daysAgoFunction = (mongodbTime) => {
-    const today = new Date();
-    const jobDate = new Date(mongodbTime);
-    today.setHours(0, 0, 0, 0);
-    jobDate.setHours(0, 0, 0, 0);
-    const diffTime = today - jobDate;
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays;
-  };
-
-  const daysAgo = job?.createdAt ? daysAgoFunction(job.createdAt) : null;
-
-  const renderFormattedText = (text, maxLines = null) => {
-    if (!text) return "Not specified";
+  if (!job) {
     return (
-      <div
-        style={{
-          whiteSpace: "pre-wrap",
-          ...(maxLines && {
-            display: "-webkit-box",
-            WebkitLineClamp: maxLines,
-            WebkitBoxOrient: "vertical",
-            overflow: "hidden",
-          }),
-        }}
-        className="text-gray-500 text-sm"
-      >
-        {text}
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
       </div>
     );
-  };
+  }
 
   return (
-    <>
-      <div className=" bg-white border border-gray-300 rounded-xl p-4 md:p-3 md:px-6 transition duration-300 hover:shadow-lg hover:border-blue-100 relative group">
-        <button
-          onClick={() => handleAction("save")}
-          disabled={isLoading}
-          className="absolute top-2 md:top-4 right-2 md:right-4 md:opacity-100 md:group-hover:opacity-100 transition duration-300 disabled:cursor-not-allowed"
-        >
-          <BookmarkIcon
-            className={`w-5 h-5 md:w-8 md:h-8 ${
-              isSaved
-                ? "text-[#012760] fill-current"
-                : "text-[#012760]"
-            }`}
-          />
-        </button>
-
-        <div className="flex items-start md:items-center mb-4 space-x-3 md:space-x-4 mt-2">
-          <div className="h-14 w-14 md:h-20 md:w-20 shrink-0 rounded-xl flex items-center justify-center ">
-            {job?.company?.logo ? (
-              <img
-                src={job?.company?.logo}
-                alt={`${job?.company?.name || "Company"} logo`}
-                className="w-full h-full object-contain rounded-lg"
-              />
-            ) : (
-              <Building2 className="w-6 h-6 md:w-8 md:h-8 text-gray-400" />
-            )}
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div className="p-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-4">{job.title}</h1>
+          <div className="flex items-center text-gray-600 mb-4">
+            <span className="mr-4">{job.company}</span>
+            <span className="mr-4">{job.location}</span>
+            <span>{job.type}</span>
           </div>
-          <div className="flex-1 min-w-0  ">
-            <div className="flex flex-col md:flex-row md:justify-between md:items-center gap-1 md:gap-2">
-              <h2 className="text-sm md:text-sm font-semibold text-[#949494] truncate">
-                {job?.company?.CompanyName || "Company Name"}
-              </h2>
-            </div>
-            <h1 className="text-base md:text-xl font-semibold text-gray-700">
-              {job?.title || "Position not specified"}
-            </h1>
-            <div className="flex items-center space-x-1  p-2 rounded-lg ">
-              <MapPin className="w-4 h-4 md:w-5 md:h-5 text-[#012760] " />
-              <span className="text-xs text-gray-600 truncate">
-                {job?.location || "Location not specified"}
-              </span>
-            </div>
+          <div className="prose max-w-none mb-6">
+            <h2 className="text-xl font-semibold mb-2">Description</h2>
+            <p className="text-gray-700">{job.description}</p>
           </div>
-        </div>
-
-        <div className="h-px bg-gray-300"></div>
-
-
-        <div className="grid grid-cols-1 sm:grid-cols-6 gap-2 mb-4 mt-3">
-          <div className="flex items-center space-x-2 bg-[#97C0FF] bg-opacity-25 p-2 rounded-lg justify-center">
-
-            <span className="text-xs text-[#444444] truncate">
-              {job?.salary ? `${job.salary}` : "Salary not specified"}
-            </span>
+          <div className="prose max-w-none mb-6">
+            <h2 className="text-xl font-semibold mb-2">Requirements</h2>
+            <ul className="list-disc list-inside text-gray-700">
+              {job.requirements?.map((req, index) => (
+                <li key={index}>{req}</li>
+              ))}
+            </ul>
           </div>
-          <div className="flex items-center space-x-2 bg-[#97C0FF] bg-opacity-25 p-2 rounded-lg justify-center">
-            <span className="text-xs text-[#444444] truncate">
-              {job?.jobType || "Job type not specified"}
-            </span>
+          <div className="prose max-w-none mb-6">
+            <h2 className="text-xl font-semibold mb-2">Benefits</h2>
+            <ul className="list-disc list-inside text-gray-700">
+              {job.benefits?.map((benefit, index) => (
+                <li key={index}>{benefit}</li>
+              ))}
+            </ul>
           </div>
-        </div>
-        <div>
-
-        <div className="flex gap-10 ">
-
-        <div className="mb-4 w-1/2 text-[#444444]  ">
-          {renderFormattedText(
-            job?.description || "No description available",
-            2
-          )}
-        </div>
-
-
-        <div className="ml-56 mt-6 flex flex-col sm:flex-row gap-2 sm:gap-3  ">
-
-          <Link
-            className="text-m md:text-m w-full sm:w-auto underline text-[#012760] "
-            onClick={() => handleAction("description")}
+          <button
+            onClick={handleApply}
+            disabled={isApplying}
+            className="w-full sm:w-auto px-6 py-3 bg-gradient-to-r from-orange-400 to-red-500 text-white rounded-md font-medium hover:from-orange-500 hover:to-red-600 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2"
           >
-            View Details
-          </Link>
-
-        </div>
+            {isApplying ? (
+              <div className="flex items-center justify-center">
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                Applying...
+              </div>
+            ) : (
+              "Apply Now"
+            )}
+          </button>
         </div>
       </div>
-      </div>
-
-      <Dialog open={showAuthModal} onOpenChange={setShowAuthModal}>
-        <DialogContent className="sm:max-w-md mx-4">
-          <DialogHeader>
-            <DialogTitle className="flex items-center justify-between">
-              Sign in Required
-              <Button
-                variant="ghost"
-                className="h-6 w-6 p-0 rounded-full"
-                onClick={() => setShowAuthModal(false)}
-              >
-                {/* <X className="h-4 w-4" /> */}
-              </Button>
-            </DialogTitle>
-            <DialogDescription>
-              Please sign in to{" "}
-              {lastAction === "save"
-                ? "save jobs to your profile"
-                : "apply to jobs"}
-              .
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 py-4">
-            <p className="text-sm text-gray-500">
-              Create an account or sign in to access all features and save your
-              favorite jobs.
-            </p>
-            <div className="flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
-              <Button
-                variant="outline"
-                className="w-full sm:w-auto"
-                onClick={() => setShowAuthModal(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={() => {
-                  setShowAuthModal(false);
-                  navigate("/signup/candidate");
-                }}
-              >
-                <LogIn className="w-4 h-4 mr-2" />
-                Sign Up
-              </Button>
-            </div>
-          </div>
-          <div className="text-right">
-            <a
-              className="text-xs cursor-pointer hover:text-blue-700 hover:underline"
-              onClick={() => {
-                setShowAuthModal(false);
-                navigate("/login");
-              }}
-            >
-              Already Registered?
-            </a>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
+    </div>
   );
-}
+};
 
 export default Job;

@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Loader2, Eye, EyeOff } from "lucide-react";
-import { api } from "@/utils/api";
+import axios from "axios";
+import { USER_API_END_POINT } from "@/utils/constant";
 
 const ForgotPassword = ({ open, onClose }) => {
   const [step, setStep] = useState(1);
@@ -73,13 +74,21 @@ const ForgotPassword = ({ open, onClose }) => {
 
     try {
       setLoading(true);
-      const data = await api.forgotPassword(email);
-      if (data.success) {
+      const response = await axios.post(`${USER_API_END_POINT}/forgot-password`, 
+        { email },
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      if (response.data.success) {
         toast.success("Verification code sent to your email");
         setStep(2);
       }
     } catch (error) {
-      toast.error(error.message || "Something went wrong");
+      toast.error(error.response?.data?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -90,13 +99,21 @@ const ForgotPassword = ({ open, onClose }) => {
 
     try {
       setLoading(true);
-      const data = await api.verifyCode({ email, code: verificationCode });
-      if (data.success) {
+      const response = await axios.post(`${USER_API_END_POINT}/verify-code`, 
+        { email, code: verificationCode },
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      if (response.data.success) {
         toast.success("Code verified successfully");
         setStep(3);
       }
     } catch (error) {
-      toast.error(error.message || "Invalid code");
+      toast.error(error.response?.data?.message || "Invalid code");
     } finally {
       setLoading(false);
     }
@@ -107,18 +124,26 @@ const ForgotPassword = ({ open, onClose }) => {
 
     try {
       setLoading(true);
-      const data = await api.resetPassword({ 
-        email, 
-        code: verificationCode, 
-        newPassword: passwords.password 
-      });
-      if (data.success) {
+      const response = await axios.post(`${USER_API_END_POINT}/reset-password`, 
+        { 
+          email, 
+          code: verificationCode, 
+          newPassword: passwords.password 
+        },
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+      if (response.data.success) {
         toast.success("Password reset successfully");
         onClose();
         setStep(1);
       }
     } catch (error) {
-      toast.error(error.message || "Something went wrong");
+      toast.error(error.response?.data?.message || "Something went wrong");
     } finally {
       setLoading(false);
     }

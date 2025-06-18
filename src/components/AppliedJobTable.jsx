@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { APPLICATION_API_END_POINT } from "@/utils/constant";
-import { fetchWithAuth } from "@/utils/fetchWithAuth";
+import axios from "axios";
+import { toast } from "sonner";
 import {
   Eye,
   MoreVertical,
@@ -55,31 +56,32 @@ const StatusBadge = ({ children, status }) => {
   );
 };
 
-function AppliedJobTable() {
-  const [allAppliedJobs, setAllAppliedJobs] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+const AppliedJobTable = () => {
+  const [applications, setApplications] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [jobsPerPage] = useState(5);
 
   const fetchApplications = async () => {
     try {
-      const res = await fetchWithAuth(APPLICATION_API_END_POINT + "/applications");
-      const data = await res.json();
-      setAllAppliedJobs(data.applications.map((application) => ({
-        id: application?.id,
-        date: new Date(application?.createdAt)?.toLocaleDateString() || "N/A",
-        role: application?.job?.title || "Not Specified",
-        company: application?.job?.company?.CompanyName || "Unknown",
-        status: application?.status || "Pending",
-        location: application?.job?.location || "Remote",
-        companyLogo: application?.job?.company?.logo || "/default-company-logo.png",
-        salary: application?.job?.salary || "Not Disclosed",
-        jobType: Array.isArray(application?.job?.jobType) ? application?.job?.jobType : [],
-        experience: application?.job?.experience || "Not Mentioned"
-      })));
+      const response = await axios.get(
+        `${APPLICATION_API_END_POINT}/applications`,
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+      setApplications(response.data.applications);
     } catch (error) {
       console.error("Error fetching applications:", error);
+      setError(error.response?.data?.message || "Failed to fetch applications");
+      toast.error("Failed to fetch applications");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -89,11 +91,11 @@ function AppliedJobTable() {
 
   const indexOfLastJob = currentPage * jobsPerPage;
   const indexOfFirstJob = indexOfLastJob - jobsPerPage;
-  const currentJobs = allAppliedJobs.slice(indexOfFirstJob, indexOfLastJob);
+  const currentJobs = applications.slice(indexOfFirstJob, indexOfLastJob);
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
-  if (isLoading) {
+  if (loading) {
     return (
       <div className="flex justify-center items-center h-64">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-blue-500"></div>
@@ -104,7 +106,7 @@ function AppliedJobTable() {
   if (error) {
     return (
       <div className="text-red-500 text-center p-4">
-        Error loading jobs: {error.message}
+        Error loading jobs: {error}
       </div>
     );
   }
@@ -113,7 +115,7 @@ function AppliedJobTable() {
     <div className="bg-white shadow-sm rounded-lg border">
       <Table>
         <TableCaption className="py-2">
-          {allAppliedJobs.length} job applications
+          {applications.length} job applications
         </TableCaption>
         <TableHeader className="bg-gray-50">
           <TableRow>
@@ -184,8 +186,8 @@ function AppliedJobTable() {
 
       <div className="flex items-center justify-between px-4 py-3 bg-white border-t">
         <div className="text-sm text-gray-500">
-          Showing {indexOfFirstJob + 1} to {Math.min(indexOfLastJob, allAppliedJobs.length)}
-          {" "}of {allAppliedJobs.length} applications
+          Showing {indexOfFirstJob + 1} to {Math.min(indexOfLastJob, applications.length)}
+          {" "}of {applications.length} applications
         </div>
         <div className="flex space-x-2">
           <Button
@@ -200,7 +202,7 @@ function AppliedJobTable() {
             variant="outline"
             size="sm"
             onClick={() => paginate(currentPage + 1)}
-            disabled={indexOfLastJob >= allAppliedJobs.length}
+            disabled={indexOfLastJob >= applications.length}
           >
             <ChevronRight className="h-4 w-4" />
           </Button>
@@ -208,6 +210,6 @@ function AppliedJobTable() {
       </div>
     </div>
   );
-}
+};
 
 export default AppliedJobTable;

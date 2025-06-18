@@ -6,11 +6,11 @@ import { RadioGroup } from "../ui/radio-group";
 import { Button } from "../ui/button";
 import { Link, useNavigate } from "react-router-dom";
 import { USER_API_END_POINT } from "@/utils/constant";
-import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { setLoading } from "@/redux/authSlice";
 import { Loader2 } from "lucide-react";
+import axios from "axios";
 
 const Signup = () => {
   const [input, setInput] = useState({
@@ -27,6 +27,13 @@ const Signup = () => {
   const { loading, user } = useSelector((store) => store.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    password: "",
+    confirmPassword: "",
+  });
 
   const changeEventHandler = (e) => {
     setInput({ ...input, [e.target.name]: e.target.value });
@@ -70,29 +77,34 @@ const Signup = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    dispatch(setLoading(true));
+
     try {
-      const res = await fetchWithAuth(`${USER_API_END_POINT}/signup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: `${input.firstName} ${input.lastName}`,
-          email: input.email,
-          password: input.password,
-          role: input.role,
-          country: input.country,
-          phoneNumber: input.phoneNumber,
-        }),
-      });
-      const data = await res.json();
-      if (data.status) {
-        navigate('/login');
-        toast.success(data.message);
+      const response = await axios.post(
+        `${USER_API_END_POINT}/signup`,
+        formData,
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.data.success) {
+        // Store token in localStorage if provided
+        if (response.data.token) {
+          localStorage.setItem('token', response.data.token);
+        }
+        toast.success("Signup successful!");
+        navigate("/login");
       }
     } catch (error) {
-      console.error("Error signing up:", error);
-      toast.error(error.response?.data?.message || "Something went wrong");
+      toast.error(error.response?.data?.message || "Signup failed");
+    } finally {
+      setIsLoading(false);
+      dispatch(setLoading(false));
     }
   };
 
@@ -213,7 +225,7 @@ const Signup = () => {
             type="submit"
             className="w-full my-4 bg-blue-600 hover:bg-blue-700 text-white"
           >
-            {loading ? (
+            {isLoading ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
             ) : (
               "Signup"

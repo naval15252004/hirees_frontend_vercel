@@ -10,12 +10,14 @@ import {
   BriefcaseIcon,
   ArrowUpRight,
   Filter,
+  Loader2,
 } from "lucide-react";
 import Navbar from "./shared/Navbar";
 import Footer from "./Footer";
 import TopCompanies from "./TopCompanies";
 import { COMPANY_API_END_POINT } from "../utils/constant";
-import { fetchWithAuth } from "@/utils/fetchWithAuth";
+import { toast } from "sonner";
+import axios from "axios";
 
 
 // Card component for displaying company information
@@ -120,7 +122,8 @@ const Company = () => {
   const navigate = useNavigate();
   const [companies, setCompanies] = useState([]);
   const [filteredCompanies, setFilteredCompanies] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [showFilters, setShowFilters] = useState(false);
   const [filters, setFilters] = useState({
     location: "",
@@ -128,31 +131,26 @@ const Company = () => {
     isHiring: false,
   });
 
-  // Fetch companies on mount
-  useEffect(() => {
-    fetchCompanies();
-  }, []);
-
-  // Filter companies when filters or companies change
-  useEffect(() => {
-    filterCompanies();
-  }, [companies, filters]);
-
-  // Fetch companies from API
   const fetchCompanies = async () => {
     try {
-      const response = await fetch(
-        `${COMPANY_API_END_POINT}/companyinfo`
+      const response = await axios.get(
+        `${COMPANY_API_END_POINT}/companies`,
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
       );
-      const data = await response.json();
-      if (data.status) {
-        setCompanies(data.companies);
-        setFilteredCompanies(data.companies);
-      }
+      setCompanies(response.data.companies);
+      setFilteredCompanies(response.data.companies);
     } catch (error) {
       console.error("Error fetching companies:", error);
+      setError(error.response?.data?.message || "Failed to fetch companies");
+      toast.error("Failed to fetch companies");
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
@@ -191,18 +189,34 @@ const Company = () => {
     });
   };
 
-  // Handle navigation to jobs page
-  const handleViewJobs = async (companyId) => {
+  const handleCompanyClick = async (companyId) => {
     try {
-      const res = await fetchWithAuth(`${COMPANY_API_END_POINT}/companies/${companyId}`);
-      const data = await res.json();
-      if (data.status) {
-        navigate(`/jobs/${companyId}`);
+      const response = await axios.get(
+        `${COMPANY_API_END_POINT}/companies/${companyId}`,
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        }
+      );
+      if (response.data.success) {
+        navigate(`/company/${companyId}`, { state: { company: response.data.company } });
       }
     } catch (error) {
       console.error("Error fetching company details:", error);
+      toast.error(error.response?.data?.message || "Failed to fetch company details");
     }
   };
+
+  useEffect(() => {
+    fetchCompanies();
+  }, []);
+
+  useEffect(() => {
+    filterCompanies();
+  }, [companies, filters]);
 
   // Render loading skeleton
   const renderLoadingSkeleton = () => (
@@ -227,6 +241,22 @@ const Company = () => {
       <p className="text-gray-600">Try adjusting your search criteria</p>
     </div>
   );
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-red-500 text-center p-4">
+        Error loading companies: {error}
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen ">
@@ -296,7 +326,7 @@ const Company = () => {
               </span>
             </div>
 
-            {isLoading ? (
+            {loading ? (
               renderLoadingSkeleton()
             ) : (
               <div className="max-w-7xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8 lg:gap-10 ">
@@ -305,7 +335,7 @@ const Company = () => {
                       <CompanyCard
                         key={company.companyId}
                         company={company}
-                        onViewJobs={handleViewJobs}
+                        onViewJobs={handleCompanyClick}
                       />
                     ))
                   : renderEmptyState()}

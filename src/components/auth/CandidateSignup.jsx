@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react";
 import { USER_API_END_POINT } from "@/utils/constant";
 import Navbar from "../shared/Navbar";
 import Footer from "../Footer";
-import { fetchWithAuth } from "@/utils/fetchWithAuth";
+import axios from "axios";
 // Import SVG for candidate
 import candidate from "../../assets/candidate.svg"; // You'll need to ensure this exists or replace with appropriate SVG
 
@@ -19,6 +19,7 @@ const CandidateSignup = () => {
     email: "",
     phoneNumber: "",
     password: "",
+    confirmPassword: "",
     resume: null,
     country: "USA",
     currentLocation: "",
@@ -30,6 +31,7 @@ const CandidateSignup = () => {
   const { loading } = useSelector((store) => store.auth);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const [isLoading, setIsLoading] = useState(false);
 
   const togglePasswordVisibility = () => {
     setInput({ ...input, showPassword: !input.showPassword });
@@ -89,30 +91,43 @@ const CandidateSignup = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  // Form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
+    setIsLoading(true);
+    dispatch(setLoading(true));
+
     try {
-      const res = await fetchWithAuth(`${USER_API_END_POINT}/signup`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
+      const response = await axios.post(
+        `${USER_API_END_POINT}/signup`,
+        {
           name: `${input.firstName} ${input.lastName}`,
           email: input.email,
           password: input.password,
           role: 'candidate',
           country: input.country,
           phoneNumber: input.phoneNumber,
-        }),
-      });
-      const data = await res.json();
-      if (data.status) {
-        navigate('/login');
+        },
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.data.success) {
+        // Store token in localStorage if provided
+        if (response.data.token) {
+          localStorage.setItem('token', response.data.token);
+        }
+        toast.success("Signup successful!");
+        navigate("/login");
       }
     } catch (error) {
-      console.error("Error signing up:", error);
+      toast.error(error.response?.data?.message || "Signup failed");
+    } finally {
+      setIsLoading(false);
+      dispatch(setLoading(false));
     }
   };
 
@@ -442,7 +457,7 @@ const CandidateSignup = () => {
                     type="submit"
                     className="w-full p-2.5 bg-gradient-to-r from-blue-600 to-blue-900 text-white rounded-md font-medium text-sm hover:from-blue-700 hover:to-blue-950 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                   >
-                    {loading ? (
+                    {isLoading ? (
                       <div className="flex items-center justify-center">
                         <Loader2 className="w-4 h-4 animate-spin mr-2" />
                         Processing...

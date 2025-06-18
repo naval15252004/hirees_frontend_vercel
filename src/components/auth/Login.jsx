@@ -9,6 +9,7 @@ import professionalImage from "../../assets/professionals.svg";
 import Navbar from "../shared/Navbar";
 import Footer from "../Footer";
 import ForgotPassword from "./ForgotPassword";
+import axios from "axios";
 
 const Login = () => {
   const [input, setInput] = useState({
@@ -52,42 +53,34 @@ const Login = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const submitHandler = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!validateForm()) return;
+    setLoading(true);
 
     try {
-      dispatch(setLoading(true));
-      const response = await fetch(`${USER_API_END_POINT}/login`, {
-        method: 'POST',
-        credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          email: input.email,
-          password: input.password
-        })
-      });
-
-      const data = await response.json();
-
-      if (data.success) {
-        if (data.token) {
-          localStorage.setItem('token', data.token);
-          dispatch(setToken(data.token));
+      const response = await axios.post(
+        `${USER_API_END_POINT}/login`,
+        input,
+        {
+          withCredentials: true,
+          headers: {
+            'Content-Type': 'application/json'
+          }
         }
-        dispatch(setUser(data.user));
-        navigate("/");
-        toast.success(data.message);
-      } else {
-        toast.error(data.message || "Login failed");
+      );
+
+      if (response.data.success) {
+        // Store token in localStorage
+        if (response.data.token) {
+          localStorage.setItem('token', response.data.token);
+        }
+        toast.success("Login successful!");
+        navigate("/dashboard");
       }
     } catch (error) {
-      toast.error(error.message || "Login failed");
+      toast.error(error.response?.data?.message || "Login failed");
     } finally {
-      dispatch(setLoading(false));
+      setLoading(false);
     }
   };
 
@@ -122,7 +115,7 @@ const Login = () => {
               </h2>
               <p className="text-gray-600 mb-6 sm:mb-8">Log in to your account.</p>
 
-              <form onSubmit={submitHandler} className="space-y-5 sm:space-y-6">
+              <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
                 <div>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">

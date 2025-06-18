@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { JOB_API_END_POINT } from "@/utils/constant";
-import { fetchWithAuth } from "@/utils/fetchWithAuth";
+import axios from "axios";
+
 import { Eye, MoreVertical, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 import {
   Table,
@@ -82,8 +83,9 @@ function JobsSection() {
   const fetchAppliedJobs = async () => {
     try {
       setIsLoading(true);
-      const res = await fetchWithAuth(`${JOB_API_END_POINT}/jobs`);
-      const data = await res.json();
+      const { data } = await axios.get(`${JOB_API_END_POINT}/jobs`, {
+        withCredentials: true
+      });
 
       if (data.status) {
         const jobs = data.applications?.map((application) => ({
@@ -113,8 +115,9 @@ function JobsSection() {
   const fetchSavedJobs = async () => {
     try {
       setIsLoading(true);
-      const res = await fetchWithAuth(`${JOB_API_END_POINT}/saved`);
-      const data = await res.json();
+      const { data } = await axios.get(`${JOB_API_END_POINT}/saved`, {
+        withCredentials: true
+      });
       setSavedJobs(data.savedJobs || []);
       setIsLoading(false);
     } catch (err) {
@@ -125,14 +128,10 @@ function JobsSection() {
 
   const handleRemoveSavedJob = async (jobId) => {
     try {
-      const res = await fetchWithAuth(`${JOB_API_END_POINT}/saved`, {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ jobId }),
+      const { data } = await axios.delete(`${JOB_API_END_POINT}/saved`, {
+        withCredentials: true,
+        data: { jobId }
       });
-      const data = await res.json();
       if (data.status) {
         setSavedJobs(prev => prev.filter(job => job.savedJobId !== jobId));
       }
