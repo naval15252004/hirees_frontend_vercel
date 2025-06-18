@@ -1,40 +1,28 @@
-import { setAllJobs } from "@/redux/jobSlice";
-import store from "@/redux/store";
-import { JOB_API_END_POINT } from "@/utils/constant";
-import { jobApi } from "@/utils/axios";
-import { useEffect, useState } from "react";
-import { useDispatch, useSelector } from "react-redux";
+import { useState, useEffect } from "react";
+import { api } from "@/utils/api";
 
-
-function useGetAllJobs() {
+const useGetAllJobs = () => {
+  const [jobs, setJobs] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const dispatch = useDispatch();
-  const { searchQuery } = useSelector(store => store.job);
 
   useEffect(() => {
-    const fetchAllJobs = async () => {
-
+    const fetchJobs = async () => {
       try {
-        // Use an empty string as default if no search query
-        const queryParam = searchQuery ? `?keyword=${searchQuery}` : '';
-
-
-        const res = await jobApi.get('/jobs');
-
-        dispatch(setAllJobs(res.data));
-      } catch (err) {
-        console.error("Error fetching jobs:", err);
-        setError(err);
+        setLoading(true);
+        const data = await api.getJobs();
+        setJobs(data.data);
+      } catch (error) {
+        setError(error.message);
       } finally {
-
+        setLoading(false);
       }
     };
 
-    // Only fetch if there's a query or you want to show all jobs initially
-    fetchAllJobs();
-  }, [dispatch, searchQuery]);
+    fetchJobs();
+  }, []);
 
-  return { error };
-}
+  return { jobs, loading, error };
+};
 
 export default useGetAllJobs;

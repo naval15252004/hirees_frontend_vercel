@@ -1,39 +1,28 @@
-import { setLoading } from "@/redux/authSlice";
-import { setAllCompanies } from "@/redux/companySlice";
+import { useState, useEffect } from "react";
+import { api } from "@/utils/api";
 
-import { COMPANY_API_END_POINT } from "@/utils/constant";
-import { companyApi } from "@/utils/axios";
-import { useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
-
-function useGetAllCompany() {
+const useGetAllCompanies = () => {
+  const [companies, setCompanies] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const dispatch = useDispatch();
 
   useEffect(() => {
-    const fetchAllCompany = async () => {
-      dispatch(setLoading(true)); // Dispatching the Redux action to set loading state
+    const fetchCompanies = async () => {
       try {
-        const res = await companyApi.get('/companies');
-
-        if (res.data.status) {
-          dispatch(setAllCompanies(res.data.companies)); // Update Redux state with fetched jobs
-          setError(null); // Clear any previous errors
-        } else {
-          setError(new Error("Failed to fetch companies. Status not true."));
-        }
-      } catch (err) {
-        console.error("Error fetching companies:", err);
-        setError(err);
+        setLoading(true);
+        const data = await api.getCompanies();
+        setCompanies(data.data);
+      } catch (error) {
+        setError(error.message);
       } finally {
-        dispatch(setLoading(false)); // Dispatching the Redux action to unset loading state
+        setLoading(false);
       }
     };
 
-    fetchAllCompany();
-  }, [dispatch]); // `dispatch` is a stable reference, safe to include in dependencies.
+    fetchCompanies();
+  }, []);
 
-  return { error }; // Return error so consuming components can use it
-}
+  return { companies, loading, error };
+};
 
-export default useGetAllCompany;
+export default useGetAllCompanies;

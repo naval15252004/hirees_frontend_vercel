@@ -1,38 +1,30 @@
-import { setLoading } from "@/redux/authSlice";
-import { setAllJobs, setSingleJob } from "@/redux/jobSlice";
-import { JOB_API_END_POINT } from "@/utils/constant";
-import { jobApi } from "@/utils/axios";
-import { useEffect, useState } from "react";
-import { useDispatch } from "react-redux";
+import { useState, useEffect } from "react";
+import { api } from "@/utils/api";
 
-function useGetSingleJob({jobId}) {
+const useGetSingleJobs = (jobId) => {
+  const [job, setJob] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const dispatch = useDispatch();
 
   useEffect(() => {
-    const fetchSingleJob = async () => {
-      dispatch(setLoading(true)); // Dispatching the Redux action to set loading state
+    const fetchJob = async () => {
       try {
-        const res = await jobApi.get(`/jobs/${jobId}`);
-
-        if (res.data.status) {
-          dispatch(setSingleJob(res.data)); // Update Redux state with fetched jobs
-          setError(null); // Clear any previous errors
-        } else {
-          setError(new Error("Failed to fetch jobs. Status not true."));
-        }
-      } catch (err) {
-        console.error("Error fetching jobs:", err);
-        setError(err);
+        setLoading(true);
+        const data = await api.getJobById(jobId);
+        setJob(data.data);
+      } catch (error) {
+        setError(error.message);
       } finally {
-        dispatch(setLoading(false)); // Dispatching the Redux action to unset loading state
+        setLoading(false);
       }
     };
 
-    fetchSingleJob();
-  }, [dispatch]); // `dispatch` is a stable reference, safe to include in dependencies.
+    if (jobId) {
+      fetchJob();
+    }
+  }, [jobId]);
 
-  return { error }; // Return error so consuming components can use it
-}
+  return { job, loading, error };
+};
 
-export default useGetSingleJob;
+export default useGetSingleJobs;

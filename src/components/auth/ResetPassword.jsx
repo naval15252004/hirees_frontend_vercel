@@ -1,3 +1,8 @@
-import { userApi } from "@/utils/axios";
+import { api } from "@/utils/api";
 
-const res = await userApi.post('/reset-password', { email, code, newPassword }); 
+const resetPassword = async (email, code, newPassword) => {
+  const data = await api.resetPassword({ email, code, newPassword });
+  return data;
+};
+
+export default resetPassword; 

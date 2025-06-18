@@ -1,3 +1,12 @@
-import { userApi } from "@/utils/axios";
+import { api } from "@/utils/api";
 
-const res = await userApi.post('/verify-code', { email, code }); 
+const verifyCode = async (email, code) => {
+  try {
+    const data = await api.verifyCode({ email, code });
+    return data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export default verifyCode; 

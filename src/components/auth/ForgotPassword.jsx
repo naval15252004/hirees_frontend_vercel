@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { Loader2, Eye, EyeOff } from "lucide-react";
-import { userApi } from "@/utils/axios";
+import { api } from "@/utils/api";
 
 const ForgotPassword = ({ open, onClose }) => {
   const [step, setStep] = useState(1);
@@ -73,13 +73,13 @@ const ForgotPassword = ({ open, onClose }) => {
 
     try {
       setLoading(true);
-      const res = await userApi.post('/forgot-password', { email });
-      if (res.data.success) {
+      const data = await api.forgotPassword(email);
+      if (data.success) {
         toast.success("Verification code sent to your email");
         setStep(2);
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Something went wrong");
+      toast.error(error.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
@@ -90,13 +90,13 @@ const ForgotPassword = ({ open, onClose }) => {
 
     try {
       setLoading(true);
-      const res = await userApi.post('/verify-code', { email, code: verificationCode });
-      if (res.data.success) {
+      const data = await api.verifyCode({ email, code: verificationCode });
+      if (data.success) {
         toast.success("Code verified successfully");
         setStep(3);
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Invalid code");
+      toast.error(error.message || "Invalid code");
     } finally {
       setLoading(false);
     }
@@ -107,14 +107,18 @@ const ForgotPassword = ({ open, onClose }) => {
 
     try {
       setLoading(true);
-      const res = await userApi.post('/reset-password', { email, code: verificationCode, newPassword: passwords.password });
-      if (res.data.success) {
+      const data = await api.resetPassword({ 
+        email, 
+        code: verificationCode, 
+        newPassword: passwords.password 
+      });
+      if (data.success) {
         toast.success("Password reset successfully");
         onClose();
         setStep(1);
       }
     } catch (error) {
-      toast.error(error.response?.data?.message || "Something went wrong");
+      toast.error(error.message || "Something went wrong");
     } finally {
       setLoading(false);
     }
