@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { setLoading, setUser, setToken } from "@/redux/authSlice";
 import { Loader2, Eye, EyeOff, Mail } from "lucide-react";
 import { toast } from "sonner";
-import { api } from "@/utils/api";
+import { USER_API_END_POINT } from "@/utils/constant";
 import professionalImage from "../../assets/professionals.svg";
 import Navbar from "../shared/Navbar";
 import Footer from "../Footer";
@@ -59,21 +59,30 @@ const Login = () => {
 
     try {
       dispatch(setLoading(true));
-      const data = await api.login({
-        email: input.email,
-        password: input.password
+      const response = await fetch(`${USER_API_END_POINT}/login`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: input.email,
+          password: input.password
+        })
       });
 
+      const data = await response.json();
+
       if (data.success) {
-        // Set token in localStorage for future requests
         if (data.token) {
           localStorage.setItem('token', data.token);
           dispatch(setToken(data.token));
         }
-        
         dispatch(setUser(data.user));
         navigate("/");
         toast.success(data.message);
+      } else {
+        toast.error(data.message || "Login failed");
       }
     } catch (error) {
       toast.error(error.message || "Login failed");

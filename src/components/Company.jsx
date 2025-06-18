@@ -15,7 +15,8 @@ import Navbar from "./shared/Navbar";
 import Footer from "./Footer";
 import TopCompanies from "./TopCompanies";
 import { COMPANY_API_END_POINT } from "../utils/constant";
-import { api } from "@/utils/api";
+import { fetchWithAuth } from "@/utils/fetchWithAuth";
+
 
 // Card component for displaying company information
 const CompanyCard = ({ company, onViewJobs }) => {
@@ -193,8 +194,11 @@ const Company = () => {
   // Handle navigation to jobs page
   const handleViewJobs = async (companyId) => {
     try {
-      const data = await api.getCompanyById(companyId);
-      navigate(`/jobs/${companyId}`);
+      const res = await fetchWithAuth(`${COMPANY_API_END_POINT}/companies/${companyId}`);
+      const data = await res.json();
+      if (data.status) {
+        navigate(`/jobs/${companyId}`);
+      }
     } catch (error) {
       console.error("Error fetching company details:", error);
     }

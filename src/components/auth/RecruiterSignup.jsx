@@ -1,12 +1,12 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import emp from "../../assets/emp.svg";
-import { userApi } from "@/utils/axios";
+import { USER_API_END_POINT } from "@/utils/constant";
+import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { setLoading } from "@/redux/authSlice";
 import { Loader2 } from "lucide-react";
-import { USER_API_END_POINT } from "@/utils/constant";
 import Navbar from "../shared/Navbar";
 import Footer from "../Footer";
 
@@ -65,33 +65,29 @@ const RecruiterSignup = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const submitHandler = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
-
-    const formData = new FormData();
-    formData.append("fullname", input.Name);
-    formData.append("email", input.email);
-    formData.append("phoneNumber", input.phoneNumber);
-    formData.append("password", input.password);
-    formData.append("role", "recruiter");
-    formData.append("country", input.country);
-
-    if (input.file) {
-      formData.append("file", input.file);
-    }
-
     try {
-      dispatch(setLoading(true));
-      const res = await userApi.post('/register', formData);
-      if (res.data.status) {
-        navigate("/login");
-        toast.success(res.data.message);
+      const res = await fetchWithAuth(`${USER_API_END_POINT}/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: `${input.Name}`,
+          email: input.email,
+          password: input.password,
+          role: 'recruiter',
+          country: input.country,
+          phoneNumber: input.phoneNumber,
+        }),
+      });
+      const data = await res.json();
+      if (data.status) {
+        navigate('/login');
       }
     } catch (error) {
-      toast.error(error.response.data.error || "Something went wrong");
-    } finally {
-      dispatch(setLoading(false));
+      console.error("Error signing up:", error);
     }
   };
 
@@ -135,7 +131,7 @@ const RecruiterSignup = () => {
                   Register here to join the Hirees.
                 </h3>
 
-                <form onSubmit={submitHandler} className="space-y-3 sm:space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
                   <div>
                     <input
                       type="text"

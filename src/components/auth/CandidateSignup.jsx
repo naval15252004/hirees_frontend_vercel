@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react";
 import { USER_API_END_POINT } from "@/utils/constant";
 import Navbar from "../shared/Navbar";
 import Footer from "../Footer";
-import { userApi } from "@/utils/axios";
+import { fetchWithAuth } from "@/utils/fetchWithAuth";
 // Import SVG for candidate
 import candidate from "../../assets/candidate.svg"; // You'll need to ensure this exists or replace with appropriate SVG
 
@@ -90,36 +90,29 @@ const CandidateSignup = () => {
   };
 
   // Form submission
-  const submitHandler = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
-
-    const formData = new FormData();
-    const fullname = `${input.firstName} ${input.lastName}`;
-    formData.append("fullname", fullname);
-    formData.append("email", input.email);
-    formData.append("phoneNumber", input.phoneNumber);
-    formData.append("password", input.password);
-    formData.append("role", "student");
-    formData.append("country", input.country);
-    formData.append("currentLocation", input.currentLocation);
-    formData.append("jobTitle", input.jobTitle);
-    formData.append("jobDomain", input.jobDomain);
-
-    // Always append resume file
-    formData.append("file", input.resume);
-
     try {
-      dispatch(setLoading(true));
-      const res = await userApi.post('/register', formData);
-      if (res.data.status) {
-        navigate("/login");
-        toast.success(res.data.message);
+      const res = await fetchWithAuth(`${USER_API_END_POINT}/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: `${input.firstName} ${input.lastName}`,
+          email: input.email,
+          password: input.password,
+          role: 'candidate',
+          country: input.country,
+          phoneNumber: input.phoneNumber,
+        }),
+      });
+      const data = await res.json();
+      if (data.status) {
+        navigate('/login');
       }
     } catch (error) {
-      toast.error(error.response?.data?.error || "Registration failed");
-    } finally {
-      dispatch(setLoading(false));
+      console.error("Error signing up:", error);
     }
   };
 
@@ -167,7 +160,7 @@ const CandidateSignup = () => {
                   Register here to join the Hirees.
                 </h3>
 
-                <form onSubmit={submitHandler} className="space-y-3 sm:space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-3 sm:space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                     <div>
                       <input

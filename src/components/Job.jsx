@@ -18,7 +18,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { jobApi } from "@/utils/axios";
+import { JOB_API_END_POINT } from "@/utils/constant";
+import { fetchWithAuth } from "@/utils/fetchWithAuth";
 
 function Job({ job }) {
   const navigate = useNavigate();
@@ -34,8 +35,9 @@ function Job({ job }) {
     if (isAuthenticated) {
       const checkSavedStatus = async () => {
         try {
-          const res = await jobApi.get(`/jobs/${job.jobId}`);
-          setIsSaved(res.data.isSaved);
+          const res = await fetchWithAuth(`${JOB_API_END_POINT}/jobs/${job.jobId}`);
+          const data = await res.json();
+          setIsSaved(data.isSaved);
         } catch (error) {
           console.error("Error checking saved status:", error);
         }
@@ -63,18 +65,33 @@ function Job({ job }) {
 
   const handleSaveJob = async () => {
     try {
-      setIsLoading(true);
-      if (!isSaved) {
-        await jobApi.post('/save', { jobId: job.jobId });
+      const res = await fetchWithAuth(`${JOB_API_END_POINT}/save`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ jobId: job.jobId }),
+      });
+      const data = await res.json();
+      if (data.status) {
         setIsSaved(true);
-      } else {
-        await jobApi.delete(`/unsave/${job.jobId}`);
+      }
+    } catch (error) {
+      console.error("Error saving job:", error);
+    }
+  };
+
+  const handleUnsaveJob = async () => {
+    try {
+      const res = await fetchWithAuth(`${JOB_API_END_POINT}/unsave/${job.jobId}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.status) {
         setIsSaved(false);
       }
     } catch (error) {
-      console.error("Error saving/unsaving job:", error);
-    } finally {
-      setIsLoading(false);
+      console.error("Error unsaving job:", error);
     }
   };
 

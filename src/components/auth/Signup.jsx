@@ -5,7 +5,8 @@ import { Input } from "../ui/input";
 import { RadioGroup } from "../ui/radio-group";
 import { Button } from "../ui/button";
 import { Link, useNavigate } from "react-router-dom";
-import { userApi } from "@/utils/axios";
+import { USER_API_END_POINT } from "@/utils/constant";
+import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import { toast } from "sonner";
 import { useDispatch, useSelector } from "react-redux";
 import { setLoading } from "@/redux/authSlice";
@@ -67,33 +68,31 @@ const Signup = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const submitHandler = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!validateForm()) return;
-
-    const formData = new FormData();
-    const fullname = `${input.firstName} ${input.lastName}`;
-    formData.append("fullname", fullname);
-    formData.append("email", input.email);
-    formData.append("phoneNumber", input.phoneNumber);
-    formData.append("password", input.password);
-    formData.append("role", input.role);
-    formData.append("country", input.country);
-    if (input.file) {
-      formData.append("file", input.file);
-    }
-
     try {
-      dispatch(setLoading(true));
-      const res = await userApi.post('/register', formData);
-      if (res.data.success) {
-        navigate("/login");
-        toast.success(res.data.message);
+      const res = await fetchWithAuth(`${USER_API_END_POINT}/signup`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: `${input.firstName} ${input.lastName}`,
+          email: input.email,
+          password: input.password,
+          role: input.role,
+          country: input.country,
+          phoneNumber: input.phoneNumber,
+        }),
+      });
+      const data = await res.json();
+      if (data.status) {
+        navigate('/login');
+        toast.success(data.message);
       }
     } catch (error) {
+      console.error("Error signing up:", error);
       toast.error(error.response?.data?.message || "Something went wrong");
-    } finally {
-      dispatch(setLoading(false));
     }
   };
 
@@ -108,7 +107,7 @@ const Signup = () => {
       <Navbar />
       <div className="flex items-center justify-center max-w-7xl mx-auto bg-gradient-to-r from-blue-200 via-blue-300 to-blue-400 min-h-screen">
         <form
-          onSubmit={submitHandler}
+          onSubmit={handleSubmit}
           className="w-full sm:w-1/2 border border-gray-200 rounded-md p-6 my-10 shadow-md bg-white"
         >
           <h1 className="font-bold text-2xl mb-5 text-center">Sign Up</h1>

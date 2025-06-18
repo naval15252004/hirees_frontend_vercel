@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { api } from "@/utils/api";
+import { SAVED_JOBS_API_END_POINT } from "@/utils/constant";
+import { fetchWithAuth } from "@/utils/fetchWithAuth";
 
 const useGetAllSavedJobs = () => {
   const [savedJobs, setSavedJobs] = useState([]);
@@ -10,7 +11,7 @@ const useGetAllSavedJobs = () => {
     const fetchSavedJobs = async () => {
       try {
         setLoading(true);
-        const data = await api.getSavedJobs();
+        const data = await fetchWithAuth(`${SAVED_JOBS_API_END_POINT}/saved-jobs`);
         setSavedJobs(data.data);
       } catch (error) {
         setError(error.message);

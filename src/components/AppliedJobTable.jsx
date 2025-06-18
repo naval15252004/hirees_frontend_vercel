@@ -1,14 +1,13 @@
 import React, { useState, useEffect } from "react";
-import { userApi } from "@/utils/axios";
+import { useNavigate } from "react-router-dom";
+import { APPLICATION_API_END_POINT } from "@/utils/constant";
+import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import {
   Eye,
   MoreVertical,
   ChevronLeft,
   ChevronRight
 } from "lucide-react";
-import {
-  APPLICATION_API_END_POINT
-} from "@/utils/constant";
 import {
   Table,
   TableBody,
@@ -63,38 +62,29 @@ function AppliedJobTable() {
   const [currentPage, setCurrentPage] = useState(1);
   const [jobsPerPage] = useState(5);
 
+  const fetchApplications = async () => {
+    try {
+      const res = await fetchWithAuth(APPLICATION_API_END_POINT + "/applications");
+      const data = await res.json();
+      setAllAppliedJobs(data.applications.map((application) => ({
+        id: application?.id,
+        date: new Date(application?.createdAt)?.toLocaleDateString() || "N/A",
+        role: application?.job?.title || "Not Specified",
+        company: application?.job?.company?.CompanyName || "Unknown",
+        status: application?.status || "Pending",
+        location: application?.job?.location || "Remote",
+        companyLogo: application?.job?.company?.logo || "/default-company-logo.png",
+        salary: application?.job?.salary || "Not Disclosed",
+        jobType: Array.isArray(application?.job?.jobType) ? application?.job?.jobType : [],
+        experience: application?.job?.experience || "Not Mentioned"
+      })));
+    } catch (error) {
+      console.error("Error fetching applications:", error);
+    }
+  };
+
   useEffect(() => {
-    const fetchAppliedJobs = async () => {
-      try {
-        setIsLoading(true);
-        const res = await userApi.get('/applications');
-
-        if (res.data.status) {
-          const jobs = res.data.applications.map((application) => ({
-            id: application?.id,
-            date: new Date(application?.createdAt)?.toLocaleDateString() || "N/A",
-            role: application?.job?.title || "Not Specified",
-            company: application?.job?.company?.CompanyName || "Unknown",
-            status: application?.status || "Pending",
-            location: application?.job?.location || "Remote",
-            companyLogo: application?.job?.company?.logo || "/default-company-logo.png",
-            salary: application?.job?.salary || "Not Disclosed",
-            jobType: Array.isArray(application?.job?.jobType) ? application?.job?.jobType : [],
-            experience: application?.job?.experience || "Not Mentioned"
-          }));
-
-
-          setAllAppliedJobs(jobs);
-        }
-        setIsLoading(false);
-      } catch (err) {
-        console.error("Error fetching applied jobs:", err);
-        setError(err);
-        setIsLoading(false);
-      }
-    };
-
-    fetchAppliedJobs();
+    fetchApplications();
   }, []);
 
   const indexOfLastJob = currentPage * jobsPerPage;

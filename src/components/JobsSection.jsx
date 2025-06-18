@@ -1,8 +1,8 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { jobApi } from "@/utils/axios";
+import { JOB_API_END_POINT } from "@/utils/constant";
+import { fetchWithAuth } from "@/utils/fetchWithAuth";
 import { Eye, MoreVertical, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
-import { APPLICATION_API_END_POINT, SAVED_JOBS_API_END_POINT } from "@/utils/constant";
 import {
   Table,
   TableBody,
@@ -82,10 +82,11 @@ function JobsSection() {
   const fetchAppliedJobs = async () => {
     try {
       setIsLoading(true);
-      const res = await jobApi.get('/jobs');
+      const res = await fetchWithAuth(`${JOB_API_END_POINT}/jobs`);
+      const data = await res.json();
 
-      if (res.data.status) {
-        const jobs = res.data.applications?.map((application) => ({
+      if (data.status) {
+        const jobs = data.applications?.map((application) => ({
           id: application?.id,
           date: new Date(application?.createdAt)?.toLocaleDateString() || "N/A",
           role: application?.job?.title || "Not Specified",
@@ -112,8 +113,9 @@ function JobsSection() {
   const fetchSavedJobs = async () => {
     try {
       setIsLoading(true);
-      const res = await jobApi.get('/saved');
-      setSavedJobs(res.data.savedJobs || []);
+      const res = await fetchWithAuth(`${JOB_API_END_POINT}/saved`);
+      const data = await res.json();
+      setSavedJobs(data.savedJobs || []);
       setIsLoading(false);
     } catch (err) {
       setError(err);
@@ -123,12 +125,22 @@ function JobsSection() {
 
   const handleRemoveSavedJob = async (jobId) => {
     try {
-      await jobApi.delete('/saved', { data: { jobId } });
-      setSavedJobs(prev => prev.filter(job => job.savedJobId !== jobId));
+      const res = await fetchWithAuth(`${JOB_API_END_POINT}/saved`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ jobId }),
+      });
+      const data = await res.json();
+      if (data.status) {
+        setSavedJobs(prev => prev.filter(job => job.savedJobId !== jobId));
+      }
     } catch (error) {
       console.error("Error removing saved job:", error);
     }
-   };
+  };
+
   const indexOfLastJob = currentPage * jobsPerPage;
   const indexOfFirstJob = indexOfLastJob - jobsPerPage;
   const currentJobs = activeTab === "applied"

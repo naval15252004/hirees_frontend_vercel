@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { api } from "@/utils/api";
+import { APPLICATION_API_END_POINT } from "@/utils/constant";
+import { fetchWithAuth } from "@/utils/fetchWithAuth";
 
 const useGetAllApplications = () => {
   const [applications, setApplications] = useState([]);
@@ -10,7 +11,7 @@ const useGetAllApplications = () => {
     const fetchApplications = async () => {
       try {
         setLoading(true);
-        const data = await api.getApplications();
+        const data = await fetchWithAuth(`${APPLICATION_API_END_POINT}/applications`);
         setApplications(data.data);
       } catch (error) {
         setError(error.message);

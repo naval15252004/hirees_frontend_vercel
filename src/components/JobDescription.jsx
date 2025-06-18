@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { savedJobsApi, jobApi, companyApi } from "@/utils/axios";
 import {
   Briefcase,
   CheckCircle2,
@@ -36,6 +35,7 @@ import { setLoading } from "@/redux/authSlice";
 import { setSingleJob } from "@/redux/jobSlice";
 import { toast } from "sonner";
 import Footer from "./Footer";
+import { fetchWithAuth } from "@/utils/fetchWithAuth";
 
 const renderFormattedText = (text, lineClamp = 0) => (
   <div
@@ -120,8 +120,9 @@ function JobDescription() {
     if (isAuthenticated) {
       const checkSavedStatus = async () => {
         try {
-          const response = await savedJobsApi.get(`/check/${jobId}`);
-          setIsSaved(response.data.isSaved);
+          const response = await fetchWithAuth(`${SAVED_JOBS_API_END_POINT}/check/${jobId}`);
+          const data = await response.json();
+          setIsSaved(data.isSaved);
         } catch (error) {
           console.error("Error checking saved status:", error);
         }
@@ -144,18 +145,33 @@ function JobDescription() {
 
   const handleSaveJob = async () => {
     try {
-      setIsLoading(true);
-      if (!isSaved) {
-        await savedJobsApi.post('/save', { jobId });
+      const res = await fetchWithAuth(`${SAVED_JOBS_API_END_POINT}/save`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ jobId }),
+      });
+      const data = await res.json();
+      if (data.status) {
         setIsSaved(true);
-      } else {
-        await savedJobsApi.delete(`/unsave/${jobId}`);
+      }
+    } catch (error) {
+      console.error("Error saving job:", error);
+    }
+  };
+
+  const handleUnsaveJob = async () => {
+    try {
+      const res = await fetchWithAuth(`${SAVED_JOBS_API_END_POINT}/unsave/${jobId}`, {
+        method: 'DELETE',
+      });
+      const data = await res.json();
+      if (data.status) {
         setIsSaved(false);
       }
     } catch (error) {
-      console.error("Error saving/unsaving job:", error);
-    } finally {
-      setIsLoading(false);
+      console.error("Error unsaving job:", error);
     }
   };
 
@@ -169,10 +185,11 @@ function JobDescription() {
     dispatch(setLoading(true));
 
     try {
-      const res = await jobApi.get(`/jobs/${jobId}`);
+      const res = await fetchWithAuth(`${JOB_API_END_POINT}/jobs/${jobId}`);
+      const data = await res.json();
 
-      if (res.data.status) {
-        toast.success(res.data.message || "Applied Successfully");
+      if (data.status) {
+        toast.success(data.message || "Applied Successfully");
         setIsApplied(true);
         dispatch(
           setSingleJob({
@@ -184,13 +201,41 @@ function JobDescription() {
           })
         );
       }
-    } catch (err) {
-      toast.error("Already Applied");
-      console.error("Error applying for job:", err);
-      setError(err);
+    } catch (error) {
+      console.error("Error applying for job:", error);
+      toast.error("Failed to apply for job");
     } finally {
       setIsApplying(false);
       dispatch(setLoading(false));
+    }
+  };
+
+  const fetchJobDetails = async () => {
+    try {
+      const res = await fetchWithAuth(`${JOB_API_END_POINT}/jobs/${jobId}`);
+      const data = await res.json();
+      setJob(data.job);
+      setCompany(data.company);
+    } catch (error) {
+      console.error("Error fetching job details:", error);
+    }
+  };
+
+  const handleApply = async () => {
+    try {
+      const res = await fetchWithAuth(`${JOB_API_END_POINT}/apply`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ jobId }),
+      });
+      const data = await res.json();
+      if (data.status) {
+        navigate('/applied-jobs');
+      }
+    } catch (error) {
+      console.error("Error applying for job:", error);
     }
   };
 

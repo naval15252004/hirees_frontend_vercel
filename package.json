@@ -30,7 +30,7 @@
     "@radix-ui/react-tooltip": "^1.1.8",
     "@reduxjs/toolkit": "^2.2.6",
     "@shadcn/ui": "^0.0.4",
-    "axios": "^1.7.9",
+    "axios": "^1.10.0",
     "caniuse-lite": "^1.0.30001692",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

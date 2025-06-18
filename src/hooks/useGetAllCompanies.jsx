@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
-import { api } from "@/utils/api";
+import { COMPANY_API_END_POINT } from "@/utils/constant";
+import { fetchWithAuth } from "@/utils/fetchWithAuth";
 
 const useGetAllCompanies = () => {
   const [companies, setCompanies] = useState([]);
@@ -9,12 +10,13 @@ const useGetAllCompanies = () => {
   useEffect(() => {
     const fetchCompanies = async () => {
       try {
-        setLoading(true);
-        const data = await api.getCompanies();
-        setCompanies(data.data);
+        const res = await fetchWithAuth(`${COMPANY_API_END_POINT}/companies`);
+        const data = await res.json();
+        setCompanies(data.companies);
+        setLoading(false);
       } catch (error) {
-        setError(error.message);
-      } finally {
+        console.error("Error fetching companies:", error);
+        setError(error);
         setLoading(false);
       }
     };
